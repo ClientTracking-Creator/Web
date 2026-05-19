@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy-worker": "wrangler deploy -c cloudflare/wrangler.toml"
   },
   "dependencies": {
     "clsx": "^2.1.1",
