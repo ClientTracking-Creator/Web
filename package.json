@@ -9,12 +9,22 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "clsx": "^2.1.1",
+    "date-fns": "^4.2.1",
+    "firebase": "^12.13.0",
+    "html2canvas": "^1.4.1",
+    "lucide-react": "^1.16.0",
+    "md5": "^2.3.0",
     "next": "16.2.6",
+    "qrcode.react": "^4.2.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "recharts": "^3.8.1",
+    "ts-khqr": "^2.2.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/md5": "^2.3.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

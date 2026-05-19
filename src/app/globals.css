@@ -1,26 +1,107 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #121212;
+  --foreground: #ffffff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-mono: Consolas, "Courier New", monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  min-width: 320px;
+  overflow-x: hidden;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body {
+  overscroll-behavior: none;
+  -ms-touch-action: manipulation;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3a3a3c;
+  border-radius: 999px;
+}
+
+.safe-bottom {
+  padding-bottom: calc(104px + env(safe-area-inset-bottom));
+}
+
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.mobile-tabbar {
+  min-height: calc(68px + env(safe-area-inset-bottom));
+}
+
+.bottom-tab-label {
+  display: -webkit-box;
+  max-width: 72px;
+  min-height: 26px;
+  overflow: hidden;
+  text-align: center;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+[data-language="km"] .bottom-tab-label {
+  max-width: 78px;
+  min-height: 30px;
+  font-family: "Noto Sans Khmer", "Khmer OS Siemreap", "Khmer Sangam MN", Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.45;
+  word-break: normal;
+}
+
+[data-language="km"] .mobile-tabbar button {
+  gap: 2px;
+  min-height: 74px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
+img {
+  max-width: 100%;
 }
