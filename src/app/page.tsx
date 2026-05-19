@@ -1740,7 +1740,7 @@ function SubscriptionScreen() {
   const verifyPayment = async (activePayment: { plan: { months: number }; qr: KHQRResponse }, showWaitingMessage = false) => {
     setPaymentError("");
     const status = await checkPaymentStatus(activePayment.qr.md5);
-    const paid = status && (status.responseCode === 0 || status.data || status.transaction || status.status === "SUCCESS");
+    const paid = status && (status.responseCode === 0 || status.data);
     if (paid) {
       await completeSubscription(activePayment);
       return;
