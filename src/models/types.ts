@@ -102,7 +102,7 @@ export interface AdminAppConfig {
 export interface BakongAdminConfig {
   bakongToken?: string;
   bakongNote?: string;
+  bakongProxyUrl?: string;
   updatedAt?: string;
   updatedBy?: string;
 }
-

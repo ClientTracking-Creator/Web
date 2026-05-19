@@ -63,7 +63,7 @@ type ClientContextType = {
   updateUserSubscription: (uid: string, subscriptionExpiry?: string, trialStartedAt?: string) => Promise<void>;
   deleteUserData: (uid: string) => Promise<void>;
   updateAdminAppConfig: (config: AdminAppConfig) => Promise<void>;
-  updateBakongToken: (token: string, note?: string) => Promise<void>;
+  updateBakongToken: (token: string, note?: string, proxyUrl?: string) => Promise<void>;
 };
 
 const ClientContext = createContext<ClientContextType | null>(null);
@@ -359,11 +359,12 @@ export function ClientProvider({ children }: { children: ReactNode }) {
       await setDoc(doc(db, "admin_config", "app"), nextConfig, { merge: true });
       await setDoc(doc(db, "start", "admin"), { adminEmails: nextConfig.adminEmails, updatedAt: new Date().toISOString(), updatedBy: user?.uid }, { merge: true });
     },
-    updateBakongToken: async (token: string, note?: string) => {
+    updateBakongToken: async (token: string, note?: string, proxyUrl?: string) => {
       assertAdmin();
       await setDoc(doc(db, "admin", "config"), {
         bakongToken: token.trim(),
         bakongNote: note?.trim() || "",
+        bakongProxyUrl: proxyUrl?.trim() || "",
         updatedAt: new Date().toISOString(),
         updatedBy: user?.uid,
       }, { merge: true });

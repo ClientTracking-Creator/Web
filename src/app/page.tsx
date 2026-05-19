@@ -1817,8 +1817,9 @@ function AdminScreen({ setView }: { setView: (view: View) => void }) {
   const { isAdmin, adminUsers, ingredients, adminAppConfig, bakongConfig, refreshAdminUsers, updateBakongToken, t } = useClients();
   const [token, setToken] = useState(bakongConfig.bakongToken || "");
   const [note, setNote] = useState(bakongConfig.bakongNote || "");
+  const [proxyUrl, setProxyUrl] = useState(bakongConfig.bakongProxyUrl || "");
   const { busy, run } = useAsyncLock();
-  useEffect(() => { setToken(bakongConfig.bakongToken || ""); setNote(bakongConfig.bakongNote || ""); }, [bakongConfig]);
+  useEffect(() => { setToken(bakongConfig.bakongToken || ""); setNote(bakongConfig.bakongNote || ""); setProxyUrl(bakongConfig.bakongProxyUrl || ""); }, [bakongConfig]);
   if (!isAdmin) return <NotFound title={t("adminAccessRequired")} back={() => setView({ name: "clients" })} />;
   const stats = adminUsers.reduce((acc, profile) => { const activeAt = new Date(profile.lastActiveAt).getTime(); const status = userAccess(profile, t); acc.total++; if (Date.now() - activeAt <= 86400000) acc.today++; if (Date.now() - activeAt <= 7 * 86400000) acc.week++; if (status.kind === "paid") acc.paid++; if (status.kind === "trial") acc.trial++; if (status.kind === "expired") acc.expired++; return acc; }, { total: 0, today: 0, week: 0, paid: 0, trial: 0, expired: 0 });
   const storage = adminUsers.reduce((sum, p) => sum + (p.firestoreBytes || 0), 0);
@@ -1831,7 +1832,7 @@ function AdminScreen({ setView }: { setView: (view: View) => void }) {
         <Card className="flex items-center gap-3"><Utensils className="text-[#ccff00]" /><div className="flex-1"><h3 className="font-black">{t("ingredientLibrarySingular")}</h3><p className="text-sm text-[#a0a0a5]">{ingredients.length} {t("ingredientsCount")}</p></div><Button variant="ghost" onClick={() => setView({ name: "ingredients" })}>{t("open")}</Button></Card>
         <Card><h3 className="mb-3 font-black">{t("firestoreStorage")}</h3><UsageBar used={storage} quotaGb={Number(adminAppConfig.storageQuotaGb) || 1} /><p className="mt-2 text-sm text-[#a0a0a5]">{t("estimatedFromUserDocuments")}</p></Card>
         <Card><h3 className="mb-3 font-black">{t("cloudinaryStorage")}</h3><UsageBar used={cloud} quotaGb={Number(adminAppConfig.cloudinaryStorageQuotaGb) || 25} /></Card>
-        <Card className="space-y-3"><h3 className="font-black">{t("bakongToken")}</h3><TextArea value={token} onChange={(e) => setToken(e.target.value)} placeholder={t("bakongTokenPlaceholder")} /><Field value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("expiryNotePlaceholder")} /><Button disabled={busy} onClick={() => run(async () => updateBakongToken(token, note))}>{busy ? t("saving") : t("saveBakongTokenNote")}</Button></Card>
+        <Card className="space-y-3"><h3 className="font-black">{t("bakongPaymentSetup")}</h3><TextArea value={token} onChange={(e) => setToken(e.target.value)} placeholder={t("bakongTokenPlaceholder")} /><Field value={proxyUrl} onChange={(e) => setProxyUrl(e.target.value)} placeholder={t("bakongProxyPlaceholder")} /><Field value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("expiryNotePlaceholder")} /><Button disabled={busy} onClick={() => run(async () => updateBakongToken(token, note, proxyUrl))}>{busy ? t("saving") : t("saveBakongTokenNote")}</Button></Card>
       </div>
     </>
   );

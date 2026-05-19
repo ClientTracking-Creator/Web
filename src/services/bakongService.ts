@@ -4,7 +4,6 @@ import { db } from "@/config/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 const BAKONG_ID = "engreaksmey_kimreach@bkrt";
-const BAKONG_TOKEN_FALLBACK = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiYmU3ODdjMjFiMzE0NDUyNyJ9LCJpYXQiOjE3Nzc5MDI3MjYsImV4cCI6MTc4NTY3ODcyNn0.Q9JAfNOtBrcktn41QNb_Ve4mhf4eaYsdtCZRR6nBGVg";
 
 export type KHQRResponse = { qrString: string; md5: string };
 
@@ -29,42 +28,44 @@ export function generatePaymentQR(amount: number, currency: "USD" | "KHR" = "USD
   return { qrString, md5: response?.data?.md5 || md5(qrString || "") };
 }
 
-async function getBakongToken() {
+async function getBakongProxyUrl() {
   try {
     const snap = await getDoc(doc(db, "admin", "config"));
-    const token = snap.exists() ? snap.data().bakongToken : "";
-    return typeof token === "string" && token.trim() ? token.trim() : BAKONG_TOKEN_FALLBACK;
+    const proxyUrl = snap.exists() ? snap.data().bakongProxyUrl : "";
+    if (typeof proxyUrl === "string" && proxyUrl.trim()) return proxyUrl.trim();
   } catch {
-    return BAKONG_TOKEN_FALLBACK;
+    // Fall through to environment fallback below.
   }
-}
-
-async function checkPaymentStatusDirect(md5Hash: string) {
-  const token = await getBakongToken();
-  const response = await fetch("https://api-bakong.nbc.gov.kh/v1/check_transaction_by_md5", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ md5: md5Hash }),
-  });
-  const data = await response.json().catch(() => null);
-  return { ok: response.ok, status: response.status, ...data };
+  return process.env.NEXT_PUBLIC_BAKONG_PROXY_URL || "";
 }
 
 export async function checkPaymentStatus(md5Hash: string) {
-  try {
-    const response = await fetch("/api/bakong/check", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ md5: md5Hash }),
-    });
-    if (response.ok) return await response.json();
-  } catch {
-    // Static hosts such as GitHub Pages cannot run the Next API route.
+  const proxyUrl = await getBakongProxyUrl();
+  if (!proxyUrl) {
+    return { ok: false, error: "Payment checker is not configured. Add the Bakong proxy URL in Admin." };
   }
 
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 15000);
   try {
-    return await checkPaymentStatusDirect(md5Hash);
-  } catch {
-    return null;
+    const response = await fetch(proxyUrl, {
+      cache: "no-store",
+      mode: "cors",
+      credentials: "omit",
+      referrerPolicy: "no-referrer",
+      redirect: "follow",
+      keepalive: false,
+      signal: controller.signal,
+      body: JSON.stringify({ md5: md5Hash }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) return { ok: false, status: response.status, error: data?.error || "Unable to check payment.", ...data };
+    return { ok: true, status: response.status, ...data };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Unable to check payment." };
+  } finally {
+    window.clearTimeout(timeout);
   }
 }
