@@ -361,13 +361,18 @@ export function ClientProvider({ children }: { children: ReactNode }) {
     },
     updateBakongToken: async (token: string, note?: string, proxyUrl?: string) => {
       assertAdmin();
+      const nextProxyUrl = proxyUrl?.trim() || "";
       await setDoc(doc(db, "admin", "config"), {
         bakongToken: token.trim(),
         bakongNote: note?.trim() || "",
-        bakongProxyUrl: proxyUrl?.trim() || "",
+        bakongProxyUrl: nextProxyUrl,
         updatedAt: new Date().toISOString(),
         updatedBy: user?.uid,
       }, { merge: true });
+
+      // Normal users typically cannot read admin/config due to Firestore rules.
+      // Mirror the proxy URL into admin_config/app so the subscription screen can verify payment.
+      await setDoc(doc(db, "admin_config", "app"), { bakongProxyUrl: nextProxyUrl }, { merge: true });
     },
   }), [user, isAdmin, records, attendance]);
 

@@ -30,7 +30,7 @@ export function generatePaymentQR(amount: number, currency: "USD" | "KHR" = "USD
 
 async function getBakongProxyUrl() {
   try {
-    const snap = await getDoc(doc(db, "admin", "config"));
+    const snap = await getDoc(doc(db, "admin_config", "app"));
     const proxyUrl = snap.exists() ? snap.data().bakongProxyUrl : "";
     if (typeof proxyUrl === "string" && proxyUrl.trim()) return proxyUrl.trim();
   } catch {

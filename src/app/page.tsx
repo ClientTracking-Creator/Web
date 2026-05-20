@@ -1745,7 +1745,15 @@ function SubscriptionScreen() {
       await completeSubscription(activePayment);
       return;
     }
-    if (showWaitingMessage) setPaymentError(status?.error || t("paymentNotFound"));
+    if (showWaitingMessage) {
+      const message =
+        status?.error ||
+        status?.responseMessage ||
+        status?.message ||
+        status?.data?.message ||
+        t("paymentNotFound");
+      setPaymentError(String(message));
+    }
   };
 
   useEffect(() => {

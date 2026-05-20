@@ -97,6 +97,7 @@ export interface AdminAppConfig {
   forceUpdateVersion?: string;
   storageQuotaGb?: number;
   cloudinaryStorageQuotaGb?: number;
+  bakongProxyUrl?: string;
 }
 
 export interface BakongAdminConfig {
