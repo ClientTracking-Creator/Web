@@ -1748,6 +1748,7 @@ function SubscriptionScreen() {
     if (showWaitingMessage) {
       const message =
         status?.error ||
+        status?.bakongRaw ||
         status?.responseMessage ||
         status?.message ||
         status?.data?.message ||

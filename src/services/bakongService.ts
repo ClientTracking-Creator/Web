@@ -61,7 +61,10 @@ export async function checkPaymentStatus(md5Hash: string) {
       method: "POST",
     });
     const data = await response.json().catch(() => null);
-    if (!response.ok) return { ok: false, status: response.status, error: data?.error || "Unable to check payment.", ...data };
+    if (!response.ok) {
+      const fallbackError = `Unable to check payment (HTTP ${response.status}).`;
+      return { ok: false, status: response.status, error: data?.error || data?.responseMessage || fallbackError, ...data };
+    }
     return { ok: true, status: response.status, ...data };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Unable to check payment." };

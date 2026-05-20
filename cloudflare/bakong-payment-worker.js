@@ -10,6 +10,14 @@ const json = (body, init = {}) => new Response(JSON.stringify(body), {
   headers: { ...corsHeaders, ...(init.headers || {}) },
 });
 
+const safeText = async (response) => {
+  try {
+    return await response.text();
+  } catch {
+    return "";
+  }
+};
+
 const worker = {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
@@ -21,7 +29,8 @@ const worker = {
     }
 
     try {
-      const { md5 } = await request.json();
+      const body = await request.json();
+      const md5 = body?.md5;
       if (!md5 || typeof md5 !== "string") {
         return json({ ok: false, error: "Missing payment hash." }, { status: 400 });
       }
@@ -38,12 +47,19 @@ const worker = {
         },
         body: JSON.stringify({ md5: md5.trim() }),
       });
-      const data = await response.json().catch(() => null);
+      const responseText = await safeText(response);
+      let data = null;
+      try {
+        data = responseText ? JSON.parse(responseText) : null;
+      } catch {
+        data = null;
+      }
 
       return json({
         ok: response.ok,
         status: response.status,
         ...(data || {}),
+        ...(data ? {} : responseText ? { bakongRaw: responseText.slice(0, 500) } : {}),
       }, { status: response.ok ? 200 : response.status });
     } catch (error) {
       return json({
