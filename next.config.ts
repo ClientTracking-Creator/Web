@@ -5,7 +5,7 @@ const repoName = process.env.GITHUB_REPOSITORY?.split("/")[1] || "Web";
 const basePath = isGithubPages ? `/${repoName}` : "";
 
 const nextConfig: NextConfig = {
-  output: "export",
+  ...(isGithubPages ? { output: "export" as const } : {}),
   trailingSlash: true,
   basePath,
   assetPrefix: basePath ? `${basePath}/` : undefined,

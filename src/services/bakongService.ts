@@ -39,16 +39,11 @@ async function getBakongProxyUrl() {
   return process.env.NEXT_PUBLIC_BAKONG_PROXY_URL || "";
 }
 
-export async function checkPaymentStatus(md5Hash: string) {
-  const proxyUrl = await getBakongProxyUrl();
-  if (!proxyUrl) {
-    return { ok: false, error: "Payment checker is not configured. Add the Bakong proxy URL in Admin." };
-  }
-
+async function postPaymentCheck(url: string, md5Hash: string) {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 15000);
   try {
-    const response = await fetch(proxyUrl, {
+    const response = await fetch(url, {
       cache: "no-store",
       mode: "cors",
       credentials: "omit",
@@ -71,4 +66,15 @@ export async function checkPaymentStatus(md5Hash: string) {
   } finally {
     window.clearTimeout(timeout);
   }
+}
+
+export async function checkPaymentStatus(md5Hash: string) {
+  const internalStatus = await postPaymentCheck("/api/bakong/check", md5Hash);
+  if (internalStatus.ok || internalStatus.status !== 404) return internalStatus;
+
+  const proxyUrl = await getBakongProxyUrl();
+  if (!proxyUrl) {
+    return { ok: false, error: "Payment checker is not configured. Add the Bakong proxy URL in Admin." };
+  }
+  return postPaymentCheck(proxyUrl, md5Hash);
 }
