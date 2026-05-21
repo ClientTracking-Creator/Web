@@ -64,6 +64,7 @@ export interface PaymentRequest {
   md5: string;
   status: "pending" | "approved" | "rejected";
   createdAt: string;
+  proofImageUri?: string;
   error?: string;
   reviewedAt?: string;
   reviewedBy?: string;
