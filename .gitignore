@@ -36,6 +36,8 @@ dev-server*.log
 
 # vercel
 .vercel
+.ssh-local/
+*.pem
 tools/
 bakong-*.log
 

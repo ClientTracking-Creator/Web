@@ -1,0 +1,5 @@
+.ssh-local/
+*.pem
+tools/
+bakong-*.log
+dev-server*.log
