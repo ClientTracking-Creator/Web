@@ -11,6 +11,7 @@ import {
   Client,
   FoodLibraryItem,
   PaymentRecord,
+  PaymentRequest,
   ProgressRecord,
   UserProfile,
 } from "@/models/types";
@@ -35,6 +36,7 @@ type ClientContextType = {
   ingredients: FoodLibraryItem[];
   attendance: AttendanceRecord[];
   payments: PaymentRecord[];
+  paymentRequests: PaymentRequest[];
   settings: AppSettings;
   settingsLoaded: boolean;
   userProfile: UserProfile | null;
@@ -57,6 +59,9 @@ type ClientContextType = {
   deleteAttendance: (id: string) => Promise<void>;
   addPayment: (payment: PaymentRecord) => Promise<void>;
   deletePayment: (id: string) => Promise<void>;
+  addPaymentRequest: (request: PaymentRequest) => Promise<void>;
+  approvePaymentRequest: (request: PaymentRequest) => Promise<void>;
+  rejectPaymentRequest: (request: PaymentRequest) => Promise<void>;
   updateSettings: (settings: AppSettings) => Promise<void>;
   refreshAdminUsers: () => Promise<void>;
   updateUserProfile: (uid: string, updates: Partial<UserProfile>) => Promise<void>;
@@ -102,6 +107,7 @@ export function ClientProvider({ children }: { children: ReactNode }) {
   const [ingredients, setIngredients] = useState<FoodLibraryItem[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [paymentRequests, setPaymentRequests] = useState<PaymentRequest[]>([]);
   const [settings, setSettings] = useState<AppSettings>(initialSettings);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -123,6 +129,7 @@ export function ClientProvider({ children }: { children: ReactNode }) {
       setIngredients([]);
       setAttendance([]);
       setPayments([]);
+      setPaymentRequests([]);
       setSettings(initialSettings);
       setSettingsLoaded(false);
       setUserProfile(null);
@@ -219,15 +226,20 @@ export function ClientProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isAdmin) {
       setAdminUsers([]);
+      setPaymentRequests([]);
       return;
     }
     const unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
       setAdminUsers(snap.docs.map((d) => d.data() as UserProfile).sort((a, b) => new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime()));
     });
     const unsubBakong = onSnapshot(doc(db, "admin", "config"), (snap) => setBakongConfig(snap.exists() ? snap.data() as BakongAdminConfig : {}));
+    const unsubPaymentRequests = onSnapshot(collectionGroup(db, "paymentRequests"), (snap) => {
+      setPaymentRequests(snap.docs.map((d) => d.data() as PaymentRequest).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    });
     return () => {
       unsubUsers();
       unsubBakong();
+      unsubPaymentRequests();
     };
   }, [isAdmin]);
 
@@ -301,6 +313,36 @@ export function ClientProvider({ children }: { children: ReactNode }) {
     deleteAttendance: (id: string) => deleteDoc(doc(db, "users", assertUser(), "attendance", id)),
     addPayment: (payment: PaymentRecord) => setDoc(doc(db, "users", assertUser(), "payments", payment.id), cleanData(payment)),
     deletePayment: (id: string) => deleteDoc(doc(db, "users", assertUser(), "payments", id)),
+    addPaymentRequest: (request: PaymentRequest) => {
+      const uid = assertUser();
+      return setDoc(doc(db, "users", uid, "paymentRequests", request.id), cleanData({ ...request, uid }));
+    },
+    approvePaymentRequest: async (request: PaymentRequest) => {
+      assertAdmin();
+      const settingsRef = doc(db, "users", request.uid, "settings", "app_settings");
+      const settingsSnap = await getDoc(settingsRef);
+      const profileSnap = await getDoc(doc(db, "users", request.uid));
+      const currentExpiry = (settingsSnap.exists() ? settingsSnap.data().subscriptionExpiry : "") || (profileSnap.exists() ? profileSnap.data().subscriptionExpiry : "");
+      const base = currentExpiry && new Date(currentExpiry) > new Date() ? new Date(currentExpiry) : new Date();
+      const expiry = new Date(base);
+      expiry.setMonth(expiry.getMonth() + request.months);
+      const update = { subscriptionExpiry: expiry.toISOString() };
+      await setDoc(settingsRef, update, { merge: true });
+      await setDoc(doc(db, "users", request.uid), update, { merge: true });
+      await setDoc(doc(db, "users", request.uid, "paymentRequests", request.id), {
+        status: "approved",
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: user?.uid,
+      }, { merge: true });
+    },
+    rejectPaymentRequest: async (request: PaymentRequest) => {
+      assertAdmin();
+      await setDoc(doc(db, "users", request.uid, "paymentRequests", request.id), {
+        status: "rejected",
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: user?.uid,
+      }, { merge: true });
+    },
     updateSettings: async (next: AppSettings) => {
       const uid = assertUser();
       setSettings(next);
@@ -388,6 +430,7 @@ export function ClientProvider({ children }: { children: ReactNode }) {
       ingredients,
       attendance,
       payments,
+      paymentRequests,
       settings,
       settingsLoaded,
       userProfile,

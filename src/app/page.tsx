@@ -4,7 +4,7 @@ import { auth } from "@/config/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useClients } from "@/context/ClientContext";
 import { useAsyncLock } from "@/lib/guards";
-import { AttendanceRecord, Client, FoodLibraryItem, GoalType, PaymentRecord, ProgressRecord, UserProfile } from "@/models/types";
+import { AttendanceRecord, Client, FoodLibraryItem, GoalType, PaymentRecord, PaymentRequest, ProgressRecord, UserProfile } from "@/models/types";
 import { checkPaymentStatus, generatePaymentQR, KHQRResponse } from "@/services/bakongService";
 import { calculateBMI, calculateBMR, calculateEstimatedWeeks, getHealthyWeightRange } from "@/utils/bmrEngine";
 import { uploadImageToCloudinary } from "@/utils/cloudinary";
@@ -1719,12 +1719,14 @@ function SubscriptionStandalone() {
 }
 
 function SubscriptionScreen() {
-  const { settings, updateSettings, t } = useClients();
+  const { settings, updateSettings, userProfile, addPaymentRequest, t } = useClients();
   const [payment, setPayment] = useState<{ plan: { title: string; amount: number; months: number }; qr: KHQRResponse } | null>(null);
   const [success, setSuccess] = useState(false);
   const [timeLeft, setTimeLeft] = useState(300);
   const [paymentError, setPaymentError] = useState("");
+  const [requestSent, setRequestSent] = useState(false);
   const { busy: checkingPayment, run: runPaymentCheck } = useAsyncLock();
+  const { busy: sendingRequest, run: runPaymentRequest } = useAsyncLock();
   const plans = [{ title: t("oneMonth"), amount: 5, months: 1 }, { title: t("threeMonths"), amount: 13, months: 3 }, { title: t("sixMonths"), amount: 24, months: 6 }, { title: t("oneYear"), amount: 45, months: 12 }];
   const access = getAccessStatus(settings);
 
@@ -1771,10 +1773,10 @@ function SubscriptionScreen() {
       <div className="space-y-5 px-5 lg:px-8">
         <Card className="flex items-center gap-4"><Activity className={access.active ? "text-[#ccff00]" : "text-[#a0a0a5]"} size={34} /><div><h2 className="text-2xl font-black">{access.active ? access.type === "trial" ? t("freeTrial") : t("active") : t("expired")}</h2>{access.active && <p className="text-[#ccff00]">{t("remainingDays")}{access.days} {t("daysRemaining").toLowerCase()}</p>}</div></Card>
         <h2 className="text-xl font-black">{t("selectPlan")}</h2>
-        <div className="grid gap-3 md:grid-cols-2">{plans.map((plan) => <button key={plan.title} onClick={() => { setPayment({ plan, qr: generatePaymentQR(plan.amount, "USD") }); setSuccess(false); setPaymentError(""); }} className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-[#3a3a3c] bg-[#1e1e1e] p-5 text-left"><div className="min-w-0"><h3 className="break-anywhere text-lg font-black">{plan.title}</h3><p className="text-2xl font-black text-[#ccff00]">${plan.amount}</p></div><span className="break-anywhere shrink-0 rounded-lg bg-[#ccff00] px-3 py-2 text-center text-sm font-black leading-tight text-black">{t("subscribeNow")}</span></button>)}</div>
+        <div className="grid gap-3 md:grid-cols-2">{plans.map((plan) => <button key={plan.title} onClick={() => { setPayment({ plan, qr: generatePaymentQR(plan.amount, "USD") }); setSuccess(false); setPaymentError(""); setRequestSent(false); }} className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-[#3a3a3c] bg-[#1e1e1e] p-5 text-left"><div className="min-w-0"><h3 className="break-anywhere text-lg font-black">{plan.title}</h3><p className="text-2xl font-black text-[#ccff00]">${plan.amount}</p></div><span className="break-anywhere shrink-0 rounded-lg bg-[#ccff00] px-3 py-2 text-center text-sm font-black leading-tight text-black">{t("subscribeNow")}</span></button>)}</div>
         <Card className="flex gap-3 text-sm text-[#a0a0a5]"><AlertCircle size={20} /> {t("subscriptionInfo")}</Card>
       </div>
-      {payment && <Modal title={success ? t("paymentSuccess") : t("paymentTitle")} close={() => setPayment(null)}>{success ? <div className="text-center"><Check className="mx-auto mb-4 text-[#ccff00]" size={80} /><p className="mb-4 text-[#a0a0a5]">{t("subscriptionUpdated")}</p><Button onClick={() => setPayment(null)} className="w-full">{t("done")}</Button></div> : <div className="flex flex-col items-center gap-4"><p className={timeLeft < 60 ? "text-[#ff453a]" : "text-[#a0a0a5]"}>{t("sessionExpires")}{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}</p><KHQRCard qrString={payment.qr.qrString} amount={payment.plan.amount} /><p className="text-[#a0a0a5]">{timeLeft > 0 ? t("paymentPending") : t("sessionExpired")}</p>{paymentError && <p className="text-center text-sm text-[#ff453a]">{paymentError}</p>}<Button disabled={checkingPayment} onClick={() => runPaymentCheck(() => verifyPayment(payment, true))} className="w-full">{checkingPayment ? t("checkingPayment") : t("checkPayment")}</Button><p className="text-lg font-bold">{t("scanToPay")}</p></div>}</Modal>}
+      {payment && <Modal title={success ? t("paymentSuccess") : t("paymentTitle")} close={() => setPayment(null)}>{success ? <div className="text-center"><Check className="mx-auto mb-4 text-[#ccff00]" size={80} /><p className="mb-4 text-[#a0a0a5]">{t("subscriptionUpdated")}</p><Button onClick={() => setPayment(null)} className="w-full">{t("done")}</Button></div> : <div className="flex flex-col items-center gap-4"><p className={timeLeft < 60 ? "text-[#ff453a]" : "text-[#a0a0a5]"}>{t("sessionExpires")}{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}</p><KHQRCard qrString={payment.qr.qrString} amount={payment.plan.amount} /><p className="text-[#a0a0a5]">{timeLeft > 0 ? t("paymentPending") : t("sessionExpired")}</p>{paymentError && <p className="text-center text-sm text-[#ff453a]">{paymentError}</p>}<Button disabled={checkingPayment} onClick={() => runPaymentCheck(() => verifyPayment(payment, true))} className="w-full">{checkingPayment ? t("checkingPayment") : t("checkPayment")}</Button><Button variant="ghost" disabled={sendingRequest || requestSent} onClick={() => runPaymentRequest(async () => { await addPaymentRequest({ id: payment.qr.md5, uid: userProfile?.uid || "", email: userProfile?.email || "", planTitle: payment.plan.title, amount: payment.plan.amount, months: payment.plan.months, md5: payment.qr.md5, status: "pending", createdAt: new Date().toISOString(), error: paymentError }); setRequestSent(true); })} className="w-full">{requestSent ? t("paymentRequestSent") : sendingRequest ? t("saving") : t("iHavePaid")}</Button><p className="text-lg font-bold">{t("scanToPay")}</p></div>}</Modal>}
     </>
   );
 }
@@ -1823,7 +1825,7 @@ function GoalSetting({ label, value, onCals, onKg, warning }: { label: string; v
 }
 
 function AdminScreen({ setView }: { setView: (view: View) => void }) {
-  const { isAdmin, adminUsers, ingredients, adminAppConfig, bakongConfig, refreshAdminUsers, updateBakongToken, t } = useClients();
+  const { isAdmin, adminUsers, ingredients, paymentRequests, adminAppConfig, bakongConfig, refreshAdminUsers, updateBakongToken, approvePaymentRequest, rejectPaymentRequest, t } = useClients();
   const [token, setToken] = useState(bakongConfig.bakongToken || "");
   const [note, setNote] = useState(bakongConfig.bakongNote || "");
   const [proxyUrl, setProxyUrl] = useState(bakongConfig.bakongProxyUrl || "");
@@ -1833,17 +1835,37 @@ function AdminScreen({ setView }: { setView: (view: View) => void }) {
   const stats = adminUsers.reduce((acc, profile) => { const activeAt = new Date(profile.lastActiveAt).getTime(); const status = userAccess(profile, t); acc.total++; if (Date.now() - activeAt <= 86400000) acc.today++; if (Date.now() - activeAt <= 7 * 86400000) acc.week++; if (status.kind === "paid") acc.paid++; if (status.kind === "trial") acc.trial++; if (status.kind === "expired") acc.expired++; return acc; }, { total: 0, today: 0, week: 0, paid: 0, trial: 0, expired: 0 });
   const storage = adminUsers.reduce((sum, p) => sum + (p.firestoreBytes || 0), 0);
   const cloud = adminUsers.reduce((sum, p) => sum + (p.storageBytes || 0), 0);
+  const pendingPaymentRequests = paymentRequests.filter((request) => request.status === "pending");
   return (
     <>
       <Header title={t("admin")} right={<IconButton label={t("refresh")} onClick={refreshAdminUsers}><RefreshCw size={20} /></IconButton>} />
       <div className="space-y-5 px-5 lg:px-8">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{([{ label: t("users"), value: stats.total, filter: "all" }, { label: t("today"), value: stats.today, filter: "today" }, { label: t("thisWeek"), value: stats.week, filter: "week" }, { label: t("paid"), value: stats.paid, filter: "paid" }, { label: t("trial"), value: stats.trial, filter: "trial" }, { label: t("expired"), value: stats.expired, filter: "expired" }] as const).map((item) => <button key={item.filter} onClick={() => setView({ name: "admin-users", filter: item.filter, title: item.label })} className="rounded-lg border border-[#3a3a3c] bg-[#1e1e1e] p-4 text-left"><p className="text-3xl font-black text-[#ccff00]">{item.value}</p><p className="text-sm text-[#a0a0a5]">{item.label}</p></button>)}</div>
+        <Card className="space-y-3"><div className="flex items-center justify-between gap-3"><h3 className="font-black">{t("paymentRequests")}</h3><span className="rounded-full bg-[#ccff00] px-3 py-1 text-sm font-black text-black">{pendingPaymentRequests.length}</span></div>{pendingPaymentRequests.length ? <div className="grid gap-3">{pendingPaymentRequests.map((request) => <PaymentRequestRow key={`${request.uid}_${request.id}`} request={request} approve={approvePaymentRequest} reject={rejectPaymentRequest} />)}</div> : <p className="text-sm text-[#a0a0a5]">{t("noPendingPaymentRequests")}</p>}</Card>
         <Card className="flex items-center gap-3"><Utensils className="text-[#ccff00]" /><div className="flex-1"><h3 className="font-black">{t("ingredientLibrarySingular")}</h3><p className="text-sm text-[#a0a0a5]">{ingredients.length} {t("ingredientsCount")}</p></div><Button variant="ghost" onClick={() => setView({ name: "ingredients" })}>{t("open")}</Button></Card>
         <Card><h3 className="mb-3 font-black">{t("firestoreStorage")}</h3><UsageBar used={storage} quotaGb={Number(adminAppConfig.storageQuotaGb) || 1} /><p className="mt-2 text-sm text-[#a0a0a5]">{t("estimatedFromUserDocuments")}</p></Card>
         <Card><h3 className="mb-3 font-black">{t("cloudinaryStorage")}</h3><UsageBar used={cloud} quotaGb={Number(adminAppConfig.cloudinaryStorageQuotaGb) || 25} /></Card>
         <Card className="space-y-3"><h3 className="font-black">{t("bakongPaymentSetup")}</h3><TextArea value={token} onChange={(e) => setToken(e.target.value)} placeholder={t("bakongTokenPlaceholder")} /><Field value={proxyUrl} onChange={(e) => setProxyUrl(e.target.value)} placeholder={t("bakongProxyPlaceholder")} /><Field value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("expiryNotePlaceholder")} /><Button disabled={busy} onClick={() => run(async () => updateBakongToken(token, note, proxyUrl))}>{busy ? t("saving") : t("saveBakongTokenNote")}</Button></Card>
       </div>
     </>
+  );
+}
+
+function PaymentRequestRow({ request, approve, reject }: { request: PaymentRequest; approve: (request: PaymentRequest) => Promise<void>; reject: (request: PaymentRequest) => Promise<void> }) {
+  const { t } = useClients();
+  const { busy, run } = useAsyncLock();
+  return (
+    <div className="rounded-lg border border-[#3a3a3c] bg-[#121212] p-3">
+      <div className="mb-3 min-w-0">
+        <p className="break-anywhere font-black">{request.email || request.uid}</p>
+        <p className="text-sm text-[#a0a0a5]">{request.planTitle} | ${request.amount} | {formatDate(request.createdAt)}</p>
+        {request.error && <p className="mt-1 break-anywhere text-xs text-[#ff9800]">{request.error}</p>}
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Button disabled={busy} onClick={() => run(async () => approve(request))}>{t("approvePayment")}</Button>
+        <Button variant="danger" disabled={busy} onClick={() => run(async () => reject(request))}>{t("reject")}</Button>
+      </div>
+    </div>
   );
 }
 

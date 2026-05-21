@@ -54,6 +54,21 @@ export interface PaymentRecord {
   note?: string;
 }
 
+export interface PaymentRequest {
+  id: string;
+  uid: string;
+  email: string;
+  planTitle: string;
+  amount: number;
+  months: number;
+  md5: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  error?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+}
+
 export interface AppSettings {
   loseWeightCals: number;
   gainMuscleCals: number;
