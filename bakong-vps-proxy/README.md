@@ -16,6 +16,21 @@ The endpoint is:
 http://localhost:8788/api/bakong/check
 ```
 
+## Run On Your Windows Computer With A Tunnel
+
+This works when Vercel/Cloudflare server IPs are blocked, because the Bakong request leaves from your normal computer internet IP.
+
+1. Start the local proxy:
+
+```powershell
+cd D:\ClientTracking\clientTracking-web\clienttracking-web-next\bakong-vps-proxy
+.\start-local-proxy.ps1
+```
+
+2. In a second PowerShell window, expose it with any HTTPS tunnel service, then use the tunnel URL plus `/api/bakong/check` as the app's Admin `Bakong Proxy URL`.
+
+Keep both windows open while you want automatic payment verification to work.
+
 ## Public VPS Setup
 
 1. Install Node.js 20+ on the VPS.

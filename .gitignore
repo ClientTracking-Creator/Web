@@ -36,6 +36,8 @@ dev-server*.log
 
 # vercel
 .vercel
+tools/
+bakong-*.log
 
 # typescript
 *.tsbuildinfo
