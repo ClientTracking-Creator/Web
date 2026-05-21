@@ -311,6 +311,7 @@
     blockUser: "Block User",
     deleteData: "Delete Data",
     deleteUserDataConfirm: "Delete user data?",
+    send: "Send",
     save: "Save",
   },
   km: {
@@ -625,6 +626,7 @@
     blockUser: "បិទអ្នកប្រើ",
     deleteData: "លុបទិន្នន័យ",
     deleteUserDataConfirm: "លុបទិន្នន័យអ្នកប្រើ?",
+    send: "ផ្ញើ",
     save: "រក្សាទុក",
   },
 } as const;
