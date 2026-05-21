@@ -70,11 +70,14 @@ async function postPaymentCheck(url: string, md5Hash: string) {
 
 export async function checkPaymentStatus(md5Hash: string) {
   const internalStatus = await postPaymentCheck("/api/bakong/check/", md5Hash);
-  if (internalStatus.ok || internalStatus.status !== 404) return internalStatus;
+  if (internalStatus.ok) return internalStatus;
 
   const proxyUrl = await getBakongProxyUrl();
   if (!proxyUrl) {
+    if (internalStatus.status && internalStatus.status !== 404) return internalStatus;
     return { ok: false, error: "Payment checker is not configured. Add the Bakong proxy URL in Admin." };
   }
-  return postPaymentCheck(proxyUrl, md5Hash);
+
+  const proxyStatus = await postPaymentCheck(proxyUrl, md5Hash);
+  return proxyStatus.ok || proxyStatus.status !== 404 ? proxyStatus : internalStatus;
 }
