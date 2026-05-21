@@ -69,7 +69,7 @@ async function postPaymentCheck(url: string, md5Hash: string) {
 }
 
 export async function checkPaymentStatus(md5Hash: string) {
-  const internalStatus = await postPaymentCheck("/api/bakong/check", md5Hash);
+  const internalStatus = await postPaymentCheck("/api/bakong/check/", md5Hash);
   if (internalStatus.ok || internalStatus.status !== 404) return internalStatus;
 
   const proxyUrl = await getBakongProxyUrl();

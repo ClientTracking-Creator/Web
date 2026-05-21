@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 
 const BAKONG_TOKEN_FALLBACK = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiYmU3ODdjMjFiMzE0NDUyNyJ9LCJpYXQiOjE3Nzc5MDI3MjYsImV4cCI6MTc4NTY3ODcyNn0.Q9JAfNOtBrcktn41QNb_Ve4mhf4eaYsdtCZRR6nBGVg";
 
+export const preferredRegion = "sin1";
+
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
