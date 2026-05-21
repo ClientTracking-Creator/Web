@@ -79,5 +79,7 @@ export async function checkPaymentStatus(md5Hash: string) {
   }
 
   const proxyStatus = await postPaymentCheck(proxyUrl, md5Hash);
-  return proxyStatus.ok || proxyStatus.status !== 404 ? proxyStatus : internalStatus;
+  if (proxyStatus.ok) return proxyStatus;
+  if (!proxyStatus.status && proxyStatus.error) return internalStatus;
+  return proxyStatus.status !== 404 ? proxyStatus : internalStatus;
 }
